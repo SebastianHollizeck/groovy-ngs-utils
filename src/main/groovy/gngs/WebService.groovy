@@ -38,108 +38,6 @@ import groovy.util.logging.Log
 import java.text.ParseException
 
 /**
- * With 2 legged OAuth there is no need for acquiring an access token or request token; these
- * are presumed known. Therefore we can implement these methods with dummy bodyies.
- * 
- * @author Simon Sadedin
- */
-class TwoLeggedOAuthAPI extends DefaultApi10a {
-
-    @Override
-    public String getAccessTokenEndpoint() {
-        return null;
-    }
-
-    @Override
-    protected String getAuthorizationBaseUrl() {
-        return null;
-    }
-
-    @Override
-    public String getRequestTokenEndpoint() {
-        return null;
-    }
-}
-
-interface WebServiceCredentials {
-
-    void configure(HttpURLConnection connection, URL url, String method, Object data, Map headers)
-}
-
-/**
- * API key credentials, eg: OAuth style
- * 
- * @author Simon Sadedin
- */
-class OAuth10Credentials  implements WebServiceCredentials {
-    String apiKey
-    String apiSecret
-
-    @Override
-    public void configure(HttpURLConnection connection, URL url, String method, Object data, Map headers) {
-        // Has to be done by OAuth code
-    }
-
-    OAuth10aService buildOAuthService() {
-        new ServiceBuilder(this.apiKey)
-            .apiSecret(this.apiSecret)
-            .build(new TwoLeggedOAuthAPI()) 
-    }
-}
-
-class BearerTokenCredentials  implements WebServiceCredentials {
-
-    String token
-
-    @Override
-    public void configure(HttpURLConnection connection, URL url, String method, Object data, Map headers) {
-        connection.setRequestProperty('Authorization','Bearer ' + token)
-    }
-}
-
-class Headers {
-    Map values
-    
-    Headers(Map values) {
-        this.values = values
-    }
-}
-
-/**
- * Username / password for basic auth
- * 
- * @author Simon Sadedin
- */
-@ToString(excludes=['password'])
-class BasicCredentials implements WebServiceCredentials {
-
-    String username
-    String password
-
-    @Override
-    public void configure(HttpURLConnection connection, URL url, String method, Object data, Map headers) {
-        connection.setRequestProperty('Authorization','Basic ' + (username + ':' + password).bytes.encodeBase64())
-    }
-}
-
-class WebServiceException extends Exception {
-    public WebServiceException(String message, int code, String reason, String body) {
-        super(message);
-        this.code = code;
-        this.reason = reason;
-        this.body = body;
-    }
-    
-    public WebServiceException(Throwable t) {
-        super('Error occurred executing request: ' + t.getMessage(), t)
-    }
-    
-    int code
-    String reason
-    String body
-}
-
-/**
  * Base class for APIs accessing Web services based on JSON data
  *
  * <p>
@@ -196,6 +94,11 @@ class WebService {
         }
         else
             this.api = ''
+    }
+    
+    WebService withToken(String token) {
+        this.bearerToken = new BearerTokenCredentials(token:token)
+        return this
     }
     
     Object post(List data) {
@@ -541,5 +444,122 @@ class WebService {
 
         return result ? new BasicCredentials(username: result.login, password: result.password) : null
     }
+}
+
+class PropertyWebService extends WebService {
+
+    public PropertyWebService(String endPoint, String api) {
+        super(endPoint, api);
+    }
+
+    public PropertyWebService(String endPoint) {
+        super(endPoint);
+    }
+    
+    WebService propertyMissing(String name) {
+        return this.path(name)
+    }
+}
+
+/**
+ * With 2 legged OAuth there is no need for acquiring an access token or request token; these
+ * are presumed known. Therefore we can implement these methods with dummy bodyies.
+ * 
+ * @author Simon Sadedin
+ */
+class TwoLeggedOAuthAPI extends DefaultApi10a {
+
+    @Override
+    public String getAccessTokenEndpoint() {
+        return null;
+    }
+
+    @Override
+    protected String getAuthorizationBaseUrl() {
+        return null;
+    }
+
+    @Override
+    public String getRequestTokenEndpoint() {
+        return null;
+    }
+}
+
+interface WebServiceCredentials {
+
+    void configure(HttpURLConnection connection, URL url, String method, Object data, Map headers)
+}
+
+/**
+ * API key credentials, eg: OAuth style
+ * 
+ * @author Simon Sadedin
+ */
+class OAuth10Credentials  implements WebServiceCredentials {
+    String apiKey
+    String apiSecret
+
+    @Override
+    public void configure(HttpURLConnection connection, URL url, String method, Object data, Map headers) {
+        // Has to be done by OAuth code
+    }
+
+    OAuth10aService buildOAuthService() {
+        new ServiceBuilder(this.apiKey)
+            .apiSecret(this.apiSecret)
+            .build(new TwoLeggedOAuthAPI()) 
+    }
+}
+
+class BearerTokenCredentials  implements WebServiceCredentials {
+
+    String token
+
+    @Override
+    public void configure(HttpURLConnection connection, URL url, String method, Object data, Map headers) {
+        connection.setRequestProperty('Authorization','Bearer ' + token)
+    }
+}
+
+class Headers {
+    Map values
+    
+    Headers(Map values) {
+        this.values = values
+    }
+}
+
+/**
+ * Username / password for basic auth
+ * 
+ * @author Simon Sadedin
+ */
+@ToString(excludes=['password'])
+class BasicCredentials implements WebServiceCredentials {
+
+    String username
+    String password
+
+    @Override
+    public void configure(HttpURLConnection connection, URL url, String method, Object data, Map headers) {
+        connection.setRequestProperty('Authorization','Basic ' + (username + ':' + password).bytes.encodeBase64())
+    }
+}
+
+class WebServiceException extends Exception {
+    public WebServiceException(String message, int code, String reason, String body) {
+        super(message);
+        this.code = code;
+        this.reason = reason;
+        this.body = body;
+    }
+    
+    public WebServiceException(Throwable t) {
+        super('Error occurred executing request: ' + t.getMessage(), t)
+    }
+    
+    int code
+    String reason
+    String body
 }
 
